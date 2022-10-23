@@ -1,0 +1,6 @@
+.button:focus{
+  background-color: coral;
+}
+.button:hover{
+  background-color: coral;
+}
