@@ -20,7 +20,7 @@ class Choix
   public:
   Choix();
   Stringvec sv(std::string &grille);
-  
+
   private:
   void read_directory(const std::string &name, Stringvec &v);
 };

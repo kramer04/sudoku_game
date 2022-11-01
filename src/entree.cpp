@@ -42,10 +42,11 @@ Ij WidgetIsFocus::wif(std::array<std::array<Gtk::Entry, C>, L> &widget)
 Sudoku::Sudoku():
   m_quit("Quit"), m_ok("Jouer"), m_save("Save"), m_restore("Restore"), m_solver("Solver"),
   m_mouse(Gtk::GestureClick::create()),
-  m_actuel(), m_precedent(),
+  m_actuel(), m_precedent(), m_heure(),
   m_num1to9str(),
-  m_erreur(0), m_juste(0),
-  m_sdkgrid("grilles")
+  m_erreur(0), m_juste(0), m_nbrcase(0),
+  m_sdkgrid("grilles"),
+  m_diff_time(std::chrono::system_clock::duration::zero())
 {
   set_title("Sudoku 9x9");
   set_default_size(500, 250);
@@ -220,6 +221,7 @@ void Sudoku::lance_jeu()
   m_numcount.fill(0);
   m_num1to9.set_text(num1to9);
   m_num1to9str = num1to9;
+  m_nbrcase = 0;
   m_juste = 0;
   m_erreur = 0;
   m_label.set_label(std::to_string(m_erreur));
@@ -240,10 +242,15 @@ void Sudoku::lance_jeu()
         ctx_entry->add_provider(fournisseur, GTK_STYLE_PROVIDER_PRIORITY_USER);
       }
       else
+      {
+        m_nbrcase++;
         clearcase(i, j);
+      }
     }
   }
-  m_start = std::chrono::steady_clock::now();
+  m_information.set_text(std::to_string(m_nbrcase));
+  m_diff_time = std::chrono::system_clock::from_time_t(0);
+  m_start = std::chrono::system_clock::now();
 }
 void Sudoku::on_mouse_key_pressed(int, double, double)
 {
@@ -263,13 +270,15 @@ void Sudoku::on_key_released(guint keyval, guint, Gdk::ModifierType, const Glib:
   ij = wif(m_entry);
 
   const gunichar unichar = gdk_keyval_to_unicode(keyval);
-  if (unichar >= '0' && unichar <= '9' && m_entry [ij.i][ij.j].get_editable())
+  if (unichar >= '1' && unichar <= '9' && m_entry [ij.i][ij.j].get_editable())
   {
     m_actuel = std::to_string(unichar - '0');
     m_entry [ij.i][ij.j].set_text(m_actuel);
-    //surligne(m_precedent, m_actuel);
+    surligne(m_precedent, m_actuel);
     if (m_gridcontrol [ij.i][ij.j] == (int) (unichar - '0'))
     {
+      m_nbrcase--;
+      m_information.set_text(std::to_string(m_nbrcase));
       test_numcount(m_gridcontrol [ij.i][ij.j] - 1);
       m_sudoku [ij.i][ij.j] = (unichar - '0');
       m_entry [ij.i][ij.j].set_editable(false);
@@ -283,18 +292,24 @@ void Sudoku::on_key_released(guint keyval, guint, Gdk::ModifierType, const Glib:
       m_juste++;
       //if (m_juste == 81)
       //{
-      m_end = std::chrono::steady_clock::now();
-      std::chrono::steady_clock::duration duree = m_end - m_start;
+      m_end = std::chrono::system_clock::now();
+      auto fin = std::chrono::floor<std::chrono::seconds>(m_end);
+
+      std::chrono::system_clock::duration diff_time = m_start - m_diff_time;
+      auto diff_t = std::chrono::floor<std::chrono::seconds>(diff_time);
+      
+      auto duree = std::chrono::floor<std::chrono::seconds>(fin - diff_t);
+      
       auto dp = std::chrono::floor<std::chrono::days>(duree);
       std::chrono::hh_mm_ss time {std::chrono::floor<std::chrono::seconds>(duree - dp)};
       auto h = time.hours();
       auto m = time.minutes();
       auto s = time.seconds();
-      Glib::ustring heure {};
-      (h.count() < 10) ? heure = "0" + std::to_string(h.count()) : heure = std::to_string(h.count());
-      (m.count() < 10) ? heure += ":0" + std::to_string(m.count()) : heure += ":" + std::to_string(m.count());
-      (s.count() < 10) ? heure += ":0" + std::to_string(s.count()) : heure += ":" + std::to_string(s.count());
-      m_dureejeu.set_text(heure);
+      
+      (h.count() < 10) ? m_heure = "0" + std::to_string(h.count()) : m_heure = std::to_string(h.count());
+      (m.count() < 10) ? m_heure += ":0" + std::to_string(m.count()) : m_heure += ":" + std::to_string(m.count());
+      (s.count() < 10) ? m_heure += ":0" + std::to_string(s.count()) : m_heure += ":" + std::to_string(s.count());
+      m_dureejeu.set_text(m_heure);
       //}
     }
     else
@@ -354,7 +369,7 @@ void Sudoku::surligne(Glib::ustring const precedent, Glib::ustring const actuel)
   {
     for (int j {0}; j < C; j++)
     {
-      if (m_entry [i][j].get_editable() && m_entry [i][j].get_text() != "")
+      if (m_entry [i][j].get_text() != "" && m_entry [i][j].get_editable())
       {
         auto erreur = Gtk::CssProvider::create();
         erreur->load_from_data(".error{background-color:#a7d3ec;}");
@@ -362,7 +377,7 @@ void Sudoku::surligne(Glib::ustring const precedent, Glib::ustring const actuel)
         blue->add_class("error");
         blue->add_provider(erreur, GTK_STYLE_PROVIDER_PRIORITY_USER);
       }
-      
+
       if (m_entry [i][j].get_text() == precedent && !m_entry [i][j].get_editable())
       {
         auto provider = Gtk::CssProvider::create();
@@ -385,21 +400,35 @@ void Sudoku::surligne(Glib::ustring const precedent, Glib::ustring const actuel)
 }
 void Sudoku::save(Grid &filesudoku, Grid &filecontrol)
 {
-  Save sudoku {"save/save.txt", filesudoku, filecontrol};
+  m_end = std::chrono::system_clock::now();
+  std::chrono::system_clock::duration diff_time = m_end - m_start;
+  Save sudoku {"save/save", filesudoku, filecontrol, m_heure, m_erreur, diff_time};
   sudoku.writefile();
   m_information.set_text("Fichier sauvegardé");
 }
 void Sudoku::restore()
 {
-  Save sudoku {"save/save.txt"};
-  m_sudoku = sudoku.restore(false);
+  Save sudoku {"save/save"};
+  Restore rst = sudoku.restore();
+  m_sudoku = rst.sudoku;
+  m_gridcontrol = rst.control;
+  m_heure = rst.heure;
+  m_dureejeu.set_text(m_heure);
+  m_erreur = rst.erreur;
+  m_label.set_label(std::to_string(m_erreur));
+
+  std::chrono::system_clock::time_point time_valid {std::chrono::system_clock::duration{rst.start}};
+  m_diff_time = time_valid;
+  m_start = std::chrono::system_clock::now();
+
+  //m_sudoku = sudoku.restore();
   m_num1to9str = num1to9;
   m_num1to9.set_text(num1to9);
   m_numcount.fill(0);
+  m_nbrcase = 0;
   m_juste = 0;
-  m_erreur = 0;
-  m_label.set_label(std::to_string(m_erreur));
-  m_dureejeu.set_text("00:00:00");
+  //m_erreur = 0;
+  //m_dureejeu.set_text("00:00:00");
   for (int i {0}; i < L; i++)
   {
     for (int j {0}; j < C; j++)
@@ -416,12 +445,15 @@ void Sudoku::restore()
         ctx_entry->add_provider(fournisseur, GTK_STYLE_PROVIDER_PRIORITY_USER);
       }
       else
+      {
+        m_nbrcase++;
         clearcase(i, j);
+      }
     }
   }
-  m_gridcontrol = sudoku.restore(true);
+  //m_gridcontrol = sudoku.restore(true);
   m_information.set_text("Fichier restauré");
-  m_start = std::chrono::steady_clock::now();
+  //m_start = std::chrono::system_clock::now();
 }
 void Sudoku::quit()
 {
@@ -431,7 +463,6 @@ void Sudoku::quit()
 void Sudoku::test_numcount(int j)
 {
   m_numcount [j] += 1;
-  //std::cout << "m_numcount [" << j << "]" << m_numcount [j] << std::endl;
   if (m_numcount [j] == 9)
   {
     m_num1to9str [2 * j] = ' ';

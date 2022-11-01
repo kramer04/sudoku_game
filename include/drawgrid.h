@@ -1,10 +1,9 @@
 #ifndef DRAWGRID_H
 #define DRAWGRID_H
 
-#include <gtkmm/drawingarea.h>
-#include <cairomm-1.16/cairomm/context.h>
+#include <gtkmm-4.0/gtkmm/drawingarea.h>
 
-class DrawGrid : public Gtk::DrawingArea
+class DrawGrid: public Gtk::DrawingArea
 {
   public:
   DrawGrid();

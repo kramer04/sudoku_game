@@ -1,4 +1,5 @@
 #include "drawgrid.h"
+#include <cairomm-1.16/cairomm/context.h>
 
 DrawGrid::DrawGrid()
 {
@@ -8,6 +9,7 @@ DrawGrid::DrawGrid()
 }
 DrawGrid::~DrawGrid()
 {}
+
 void DrawGrid::on_draw(const Cairo::RefPtr<Cairo::Context> &cr, int width, int height)
 {
   // coordonnées (0,0) soit en haut à gauche
@@ -18,7 +20,7 @@ void DrawGrid::on_draw(const Cairo::RefPtr<Cairo::Context> &cr, int width, int h
   cr->set_line_width(2.0);
 
   // tracé en coordonnées absolues
-  cr->set_source_rgb(0.2, 0.2, 0.2);
+  cr->set_source_rgb(0.812, 0.157, 0.157);
   cr->move_to(0, 1);
   cr->line_to(xc, 1);
   cr->move_to(0, 132);

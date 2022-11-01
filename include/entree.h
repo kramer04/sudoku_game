@@ -1,12 +1,12 @@
 #ifndef ENTREE_H
 #define ENTREE_H
 
-#include "choixgrille.h"
 #include "streamgrid.h"
+#include "choixgrille.h"
 #include "solver.h"
 #include "drawgrid.h"
 #include "save.h"
-#include <chrono>
+#include <sigc++/sigc++.h>
 #include <iostream>
 #include <gtkmm/window.h>
 #include <gtkmm/eventcontrollerkey.h>
@@ -75,15 +75,15 @@ class Sudoku: public WidgetIsFocus
   Ij ij;
 
   Glib::RefPtr<Gtk::GestureClick> m_mouse;
-  Glib::ustring m_actuel, m_precedent;
+  Glib::ustring m_actuel, m_precedent, m_heure;
   std::string m_num1to9str;
   std::array<int, 9> m_numcount;
-  uint m_erreur, m_juste;
+  uint m_erreur, m_juste, m_nbrcase;
   Grid m_gridcontrol;
   Grid m_sudoku;
   std::string m_sdkgrid;//path to grids
   Stringvec m_choixgrille;
-  std::chrono::steady_clock::time_point m_start, m_end;
+  std::chrono::system_clock::time_point m_start, m_end, m_diff_time;
 
   Solver solution;
   DrawGrid lines;

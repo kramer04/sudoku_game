@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <array>
+#include <chrono>
 #include <fstream>
 #include <limits>
 #include <random>
